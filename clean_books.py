@@ -14,8 +14,8 @@ stupidNames = ['in', 'an', 'many', 'love', 'precious', 'king', 'long', \
               'soon', 'young', 'miss', 'man', 'moon', 'van', 'marry', \
               'autumn', 'summer', 'song', 'season', 'sang']
 
-rawBookDir = 'gutenburg/'
-cleanBookDir = 'clean_books/'
+rawBookDir = 'test/'
+cleanBookDir = 'clean_books_test/'
 namesDBFile = 'names_db.txt'
 
 """ Function to load in names database """
@@ -40,10 +40,14 @@ def countAndCalculate(args):
   
   wordCounterDict = {}
   for currBook in glob.glob(rawBookDir + '*.txt'):
+    print 'Getting counts for:', currBook
     fid = open(currBook, 'r')
-    rawBook = fid.read()
+    rawBook = fid.read().decode('utf-8')
     wordTokens = nltk.word_tokenize(rawBook)
     lowerWordTokens = [wl.lower() for wl in wordTokens]
+    for wl in range(len(lowerWordTokens)):
+      lowerWordTokens[wl] = lowerWordTokens[wl].\
+        rstrip('-').strip('-').rstrip('_').strip('_')
 
     # Keep track of counts
     for word in lowerWordTokens:
@@ -88,13 +92,16 @@ def tokenizeAndClean(unkWordSet):
     fidClean = open(cleanBookDir + bookName, 'w')
 
     fidRaw = open(currBook, 'r')
-    rawBook = fidRaw.read()
+    rawBook = fidRaw.read().decode('utf-8')
     sentTokens = nltk.sent_tokenize(rawBook)
 
     # For each sentence, tokenize and make all words lowercase
     for sent in sentTokens:
       wordTokens = nltk.word_tokenize(sent)
       lowerWordTokens = [wl.lower() for wl in wordTokens]
+      for wl in range(len(lowerWordTokens)):
+        lowerWordTokens[wl] = lowerWordTokens[wl].\
+          rstrip('-').strip('-').rstrip('_').strip('_')
 
       # Use indexing as oppose to direct iteration to replace entries if needed
       # Need to traverse in reverse order since we may delete entries
@@ -107,7 +114,7 @@ def tokenizeAndClean(unkWordSet):
 
       # Join words
       cleanSent = ' '.join(lowerWordTokens)
-      fidClean.write(cleanSent + '\n')
+      fidClean.write(cleanSent.encode('utf-8') + '\n')
 
     fidClean.close()
     fidRaw.close()
