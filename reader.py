@@ -1,3 +1,4 @@
+
 # Copyright 2015 The TensorFlow Authors. All Rights Reserved.
 #
 # Licensed under the Apache License, Version 2.0 (the "License");
@@ -21,7 +22,7 @@ from __future__ import print_function
 
 import collections
 import os
-
+import numpy as np
 import tensorflow as tf
 
 
@@ -38,13 +39,29 @@ def _build_vocab(filename):
 
   words, _ = list(zip(*count_pairs))
   word_to_id = dict(zip(words, range(len(words))))
-
   return word_to_id
 
 
 def _file_to_word_ids(filename, word_to_id):
   data = _read_words(filename)
   return [word_to_id[word] for word in data if word in word_to_id]
+
+
+def build_embedding(word_to_id):
+  embedding_matrix = np.random.uniform(size=(len(word_to_id), 50), low=-1.0, high=1.9)
+  path = "glove.6B/glove.6B.50d.txt"
+
+  with open(path) as text:
+    for line in text:
+      vector_components = line.split()
+      word = vector_components[0]
+      word_vector = np.zeros((50,))
+      if word in word_to_id:
+        for i in range(1,len(vector_components)):
+          word_vector[i-1] = float(vector_components[i])
+        embedding_matrix[word_to_id[word]] = word_vector[i-1]
+
+  return embedding_matrix
 
 
 def ptb_raw_data(data_path=None):
@@ -75,7 +92,8 @@ def ptb_raw_data(data_path=None):
   valid_data = _file_to_word_ids(valid_path, word_to_id)
   test_data = _file_to_word_ids(test_path, word_to_id)
   vocabulary = len(word_to_id)
-  return train_data, valid_data, test_data, vocabulary
+  embedding = build_embedding(word_to_id)
+  return train_data, valid_data, test_data, vocabulary, embedding
 
 
 def ptb_producer(raw_data, batch_size, num_steps, name=None):
