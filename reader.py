@@ -59,7 +59,7 @@ def build_embedding(word_to_id):
       if word in word_to_id:
         for i in range(1,len(vector_components)):
           word_vector[i-1] = float(vector_components[i])
-        embedding_matrix[word_to_id[word]] = word_vector[i-1]
+        embedding_matrix[word_to_id[word]] = word_vector
 
   return embedding_matrix
 
