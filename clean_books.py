@@ -7,7 +7,6 @@ import glob
 import argparse
 import numpy as np
 
-# will
 stupidNames = ['in', 'an', 'many', 'love', 'precious', 'king', 'long', \
               'forest', 'sage', 'chance', 'ai', 'sun', 'rose', 'golden', \
               'so', 'miles', 'my', 'son', 'see', 'may', 'else', 'spring', \
@@ -16,6 +15,7 @@ stupidNames = ['in', 'an', 'many', 'love', 'precious', 'king', 'long', \
 
 rawBookDir = 'test/'
 cleanBookDir = 'clean_books_test/'
+gatherBookDir = 'clean_books_div/'
 namesDBFile = 'names_db.txt'
 
 """ Function to load in names database """
@@ -45,9 +45,12 @@ def countAndCalculate(args):
     rawBook = fid.read().decode('utf-8')
     wordTokens = nltk.word_tokenize(rawBook)
     lowerWordTokens = [wl.lower() for wl in wordTokens]
+    lowerWordTokens = \
+      [t.replace("``", '"').replace("''", '"') for t in lowerWordTokens]
+
     for wl in range(len(lowerWordTokens)):
       lowerWordTokens[wl] = lowerWordTokens[wl].\
-        rstrip('-').strip('-').rstrip('_').strip('_')
+        rstrip('-').strip('-').rstrip('_').strip('_')      
 
     # Keep track of counts
     for word in lowerWordTokens:
@@ -99,16 +102,15 @@ def tokenizeAndClean(unkWordSet):
     for sent in sentTokens:
       wordTokens = nltk.word_tokenize(sent)
       lowerWordTokens = [wl.lower() for wl in wordTokens]
+      lowerWordTokens = \
+        [t.replace("``", '"').replace("''", '"') for t in lowerWordTokens]
       for wl in range(len(lowerWordTokens)):
         lowerWordTokens[wl] = lowerWordTokens[wl].\
           rstrip('-').strip('-').rstrip('_').strip('_')
 
-      # Use indexing as oppose to direct iteration to replace entries if needed
-      # Need to traverse in reverse order since we may delete entries
-      for w in range(len(lowerWordTokens) - 1, -1 , -1):
+      for w in range(len(lowerWordTokens)):
         if lowerWordTokens[w] in namesDB:
-          # print 'Found name:', lowerWordTokens[w], ', now deleting...'
-          del lowerWordTokens[w]
+          lowerWordTokens[w] = '<name>'
         elif lowerWordTokens[w] in unkWordSet:
           lowerWordTokens[w] = '<unk>'
 
@@ -121,12 +123,57 @@ def tokenizeAndClean(unkWordSet):
 
   print 'All books have been cleaned! Cleaned books available in', cleanBookDir
 
+def gatherBooks(args):
+  
+  # Check if directory exists. If not, make it.
+  if not os.path.exists(gatherBookDir):
+    os.makedirs(gatherBookDir)
+
+  lineCap = args.linesCap
+  uniqueAuthorSet = set()
+
+  for currBook in glob.glob(cleanBookDir + '*.txt'):
+    currbookSplit = currBook.split('___')[0].split('/')
+    uniqueAuthorSet.add(currbookSplit[1])
+    
+
+  for author in uniqueAuthorSet:
+    fidAll = open(gatherBookDir + author + '_all.txt', 'w')
+    currLines = 0
+    for currBook in glob.glob(cleanBookDir + author + '*.txt'):
+      fidRead = open(currBook, 'r')
+      
+      for line in fidRead:
+        if currLines < lineCap:
+          fidAll.write(line)
+          currLines += 1
+        else:
+          break
+      
+      if currLines >= lineCap:
+        break
+      
+      fidRead.close()
+    fidAll.close()
+  
+  print 'Concatenation complete, now getting line counts'
+  for currBook in glob.glob(gatherBookDir + '*_all.txt'):
+    fid = open(currBook, 'r')
+    allLines = fid.readlines()
+    bookTitle = currBook.split('/')[1]
+    print bookTitle, 'lines:', len(allLines)
+  
+  print 'Line counting complete!'
+
 if __name__ == '__main__':
   ap = argparse.ArgumentParser()
-  ap.add_argument('--th', type=float, default=0.001,
-                  help='Percent of total number of tokens to keep')
+  ap.add_argument('--th', type=float, default=0.0001,
+                  help='Perc of total tokens to keep (default: 0.0001)')
+  ap.add_argument('--linesCap', type=int, default=10000,
+                  help='Line limit per author (default: 10000)')
   args = ap.parse_args()
-
+  
   unkWords = countAndCalculate(args)
   tokenizeAndClean(unkWords)
+  gatherBooks(args)
   

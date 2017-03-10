@@ -25,6 +25,13 @@ import os
 import numpy as np
 import tensorflow as tf
 
+glovePath = "glove.42B.300d.txt"
+# trainFile = "ptb.train.txt"
+trainFile = "guten_train.txt"
+# devFile = "ptb.valid.txt"
+devFile = "guten_dev.txt"
+# testFile = "ptb.test.txt"
+testFile = "guten_test.txt"
 
 def _read_words(filename):
   with tf.gfile.GFile(filename, "r") as f:
@@ -48,14 +55,16 @@ def _file_to_word_ids(filename, word_to_id):
 
 
 def build_embedding(word_to_id):
-  embedding_matrix = np.random.uniform(size=(len(word_to_id), 50), low=-1.0, high=1.9)
-  path = "glove.6B/glove.6B.50d.txt"
+  dimSize = glovePath.split('.')[-2]
+  dimSize = int(dimSize.strip('d'))
+  embedding_matrix = np.random.uniform(size=(len(word_to_id), dimSize), \
+    low=-1.0, high=1.9)
 
-  with open(path) as text:
+  with open(glovePath) as text:
     for line in text:
       vector_components = line.split()
       word = vector_components[0]
-      word_vector = np.zeros((50,))
+      word_vector = np.zeros((dimSize,))
       if word in word_to_id:
         for i in range(1,len(vector_components)):
           word_vector[i-1] = float(vector_components[i])
@@ -83,9 +92,9 @@ def ptb_raw_data(data_path=None):
     where each of the data objects can be passed to PTBIterator.
   """
 
-  train_path = os.path.join(data_path, "ptb.train.txt")
-  valid_path = os.path.join(data_path, "ptb.valid.txt")
-  test_path = os.path.join(data_path, "ptb.test.txt")
+  train_path = os.path.join(data_path, trainFile)
+  valid_path = os.path.join(data_path, devFile)
+  test_path = os.path.join(data_path, testFile)
 
   word_to_id = _build_vocab(train_path)
   train_data = _file_to_word_ids(train_path, word_to_id)

@@ -49,7 +49,7 @@ $ tar xvf simple-examples.tgz
 
 To run:
 
-$ python ptb_word_lm.py --data_path=simple-examples/data/
+$ python gutenberg_word_lm.py --data_path=simple-examples/data/
 
 """
 from __future__ import absolute_import
@@ -163,6 +163,7 @@ class PTBModel(object):
         [logits],
         [tf.reshape(input_.targets, [-1])],
         [tf.ones([batch_size * num_steps], dtype=data_type())])
+
     self._cost = cost = tf.reduce_sum(loss) / batch_size
     self._final_state = state
 
@@ -223,7 +224,7 @@ class SmallConfig(object):
   keep_prob = 1.0
   lr_decay = 0.5
   batch_size = 20
-  vocab_size = 10000
+  vocab_size = 100000 # 10000
 
 
 class MediumConfig(object):
@@ -235,11 +236,11 @@ class MediumConfig(object):
   num_steps = 35
   hidden_size = 650
   max_epoch = 6
-  max_max_epoch = 39
+  max_max_epoch = 25 # 39
   keep_prob = 0.5
   lr_decay = 0.8
   batch_size = 20
-  vocab_size = 10000
+  vocab_size = 100000 # 10000
 
 
 class LargeConfig(object):
