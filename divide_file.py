@@ -9,6 +9,10 @@ trainSize = 0.8
 devSize = 0.1
 # testSize = 0.2, not needed
 
+model='class' # gen or class
+
+globSearch = '*_all.txt'
+
 authorLabelDict = {
   "Charles Darwin": 0,
   "Edgar Allan Poe": 1,
@@ -19,14 +23,14 @@ authorLabelDict = {
   "Michael Faraday": 6,
   "Ralph Waldo Emerson": 7,
   "Rudyard Kipling": 8,
-  "Winston Churchill": 9  
+  "Winston Churchill": 9
 }
 
 fidTrain = open(totFileDir + 'guten_train.txt', 'w')
 fidDev = open(totFileDir + 'guten_dev.txt', 'w')
 fidTest = open(totFileDir + 'guten_test.txt', 'w')
 
-for currBook in glob.glob(totFileDir + '*_all.txt'):  
+for currBook in glob.glob(totFileDir + globSearch):  
   currBookName = currBook.split('/')[1].split('_')[0]
   label = str(authorLabelDict[currBookName])
 
@@ -39,11 +43,14 @@ for currBook in glob.glob(totFileDir + '*_all.txt'):
   print currBook, 'has', numLines, 'lines.'
   
   for i, line in enumerate(allLines):
-    lineSplit = line.split()
-    for x in range(len(lineSplit)):
-      lineSplit[x] = label+lineSplit[x]
-    
-    line2Write = ' '.join(lineSplit)
+    if model == 'class':
+      lineSplit = line.split()
+      for x in range(len(lineSplit)):
+        lineSplit[x] = label+lineSplit[x]
+      
+      line2Write = ' '.join(lineSplit)
+    else:
+      line2Write = line
 
     if i < trainCutoff:
       fidTrain.write(line2Write)

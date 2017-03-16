@@ -169,7 +169,7 @@ class PTBModel(object):
         "softmax_w", [size, num_labels], dtype=data_type())
     softmax_b = tf.get_variable("softmax_b", [num_labels], dtype=data_type())
     logits = tf.matmul(output, softmax_w) + softmax_b
-    
+
     labels_in = tf.reshape(input_.targets, [-1])
 
     print('Shape of logits:', logits.get_shape())
@@ -179,12 +179,12 @@ class PTBModel(object):
         logits=[logits],
         labels=[labels_in])
         
-    print(loss.get_shape())
-    # sys.exit()
+    print('Shape of loss:', loss.get_shape())
 
     self._cost = cost = tf.reduce_sum(loss) / batch_size
     self._final_state = state
-    self._final_pred = output
+    self._final_pred = tf.argmax(logits, 1)
+    self._final_label = tf.to_int64(labels_in)
 
     corr_pred = tf.equal(tf.argmax(logits, 1), \
       tf.to_int64(labels_in))
@@ -202,6 +202,8 @@ class PTBModel(object):
     self._train_op = optimizer.apply_gradients(
         zip(grads, tvars),
         global_step=tf.contrib.framework.get_or_create_global_step())
+    
+    # self._train_op = tf.train.AdamOptimizer(self._lr).minimize(cost)
 
     self._new_lr = tf.placeholder(
         tf.float32, shape=[], name="new_learning_rate")
@@ -233,6 +235,10 @@ class PTBModel(object):
   @property
   def final_pred(self):
     return self._final_pred
+  
+  @property
+  def final_label(self):
+    return self._final_label
 
   @property
   def lr(self):
@@ -297,13 +303,13 @@ class TestConfig(object):
   learning_rate = 1.0
   max_grad_norm = 1
   num_layers = 1
-  num_steps = 2
+  num_steps = 5
   hidden_size = 2
   max_epoch = 1
-  max_max_epoch = 3 # 1
+  max_max_epoch = 2
   keep_prob = 1.0
-  lr_decay = 0.5
-  batch_size = 10 # 20
+  lr_decay = 0.1 # 0.5
+  batch_size = 5 # 20
   vocab_size = 30000
 
 
@@ -319,7 +325,8 @@ def run_epoch(session, model, eval_op=None, verbose=False):
       "cost": model.cost,
       "acc": model.acc,
       "final_state": model.final_state,
-      "final_pred": model.final_pred
+      "final_pred": model.final_pred,
+      "final_label": model.final_label
   }
   if eval_op is not None:
     fetches["eval_op"] = eval_op
@@ -329,6 +336,9 @@ def run_epoch(session, model, eval_op=None, verbose=False):
     for i, (c, h) in enumerate(model.initial_state):
       feed_dict[c] = state[i].c
       feed_dict[h] = state[i].h
+
+    # if step % (model.input.epoch_size // 2) == 2:
+    #   print(session.run(fetches, feed_dict))
 
     vals = session.run(fetches, feed_dict)
     cost = vals["cost"]

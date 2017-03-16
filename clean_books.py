@@ -169,8 +169,8 @@ if __name__ == '__main__':
   ap = argparse.ArgumentParser()
   ap.add_argument('--th', type=float, default=0.0001,
                   help='Perc of total tokens to keep (default: 0.0001)')
-  ap.add_argument('--linesCap', type=int, default=50000,
-                  help='Line limit per author (default: 50000)')
+  ap.add_argument('--linesCap', type=int, default=12000,
+                  help='Line limit per author (default: 12000)')
   args = ap.parse_args()
   
   unkWords = countAndCalculate(args)

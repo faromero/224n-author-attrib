@@ -159,6 +159,7 @@ class PTBModel(object):
         "softmax_w", [size, vocab_size], dtype=data_type())
     softmax_b = tf.get_variable("softmax_b", [vocab_size], dtype=data_type())
     logits = tf.matmul(output, softmax_w) + softmax_b
+
     loss = tf.contrib.legacy_seq2seq.sequence_loss_by_example(
         [logits],
         [tf.reshape(input_.targets, [-1])],
@@ -236,11 +237,11 @@ class MediumConfig(object):
   num_steps = 35
   hidden_size = 650
   max_epoch = 6
-  max_max_epoch = 25 # 39
+  max_max_epoch = 20 # 39
   keep_prob = 0.5
   lr_decay = 0.8
   batch_size = 20
-  vocab_size = 100000 # 10000
+  vocab_size = 50000 # 10000
 
 
 class LargeConfig(object):
@@ -256,7 +257,7 @@ class LargeConfig(object):
   keep_prob = 0.35
   lr_decay = 1 / 1.15
   batch_size = 20
-  vocab_size = 10000
+  vocab_size = 30000
 
 
 class TestConfig(object):
@@ -272,7 +273,7 @@ class TestConfig(object):
   keep_prob = 1.0
   lr_decay = 0.5
   batch_size = 20
-  vocab_size = 10000
+  vocab_size = 30000
 
 
 def run_epoch(session, model, eval_op=None, verbose=False):
