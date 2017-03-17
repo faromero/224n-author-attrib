@@ -13,22 +13,11 @@
 # limitations under the License.
 # ==============================================================================
 
-"""Example / benchmark for building a PTB LSTM model.
+# This file was modified by Gregory Luppescu and Francisco Romero for the CS 224n project.
 
-Trains the model described in:
-(Zaremba, et. al.) Recurrent Neural Network Regularization
-http://arxiv.org/abs/1409.2329
+"""Building LSTM Model for Project Gutenberg classification
 
-There are 3 supported model configurations:
-===========================================
-| config | epochs | train | valid  | test
-===========================================
-| small  | 13     | 37.99 | 121.39 | 115.91
-| medium | 39     | 48.45 |  86.16 |  82.07
-| large  | 55     | 37.87 |  82.62 |  78.29
-The exact results may vary depending on the random initialization.
-
-The hyperparameters used in the model:
+Hyperparameters:
 - init_scale - the initial scale of the weights
 - learning_rate - the initial value of the learning rate
 - max_grad_norm - the maximum permissible norm of the gradient
@@ -41,15 +30,7 @@ The hyperparameters used in the model:
 - lr_decay - the decay of the learning rate for each epoch after "max_epoch"
 - batch_size - the batch size
 
-The data required for this example is in the data/ dir of the
-PTB dataset from Tomas Mikolov's webpage:
-
-$ wget http://www.fit.vutbr.cz/~imikolov/rnnlm/simple-examples.tgz
-$ tar xvf simple-examples.tgz
-
-To run:
-
-$ python gutenberg_word_lm.py --data_path=simple-examples/data/
+Usage: python gutenberg_word_lm.py --data_path=data/ --size=<small, medium, large, test>
 
 """
 from __future__ import absolute_import
@@ -83,20 +64,20 @@ def data_type():
   return tf.float16 if FLAGS.use_fp16 else tf.float32
 
 
-class PTBInput(object):
+class GutenInput(object):
   """The input data."""
 
   def __init__(self, config, data, name=None):
     self.batch_size = batch_size = config.batch_size
     self.num_steps = num_steps = config.num_steps
     self.epoch_size = ((len(data) // batch_size) - 1) // num_steps
-    self.input_data, self.targets = reader.ptb_producer(
+    self.input_data, self.targets = reader.guten_producer(
         data, batch_size, num_steps, name=name)
     
 
 
-class PTBModel(object):
-  """The PTB model."""
+class GutenModel(object):
+  """The Gutenberg model."""
 
   def __init__(self, is_training, config, input_,  embedding):
     self._input = input_
@@ -326,37 +307,37 @@ def get_config():
 
 def main(_):
   if not FLAGS.data_path:
-    raise ValueError("Must set --data_path to PTB data directory")
-
-  raw_data = reader.ptb_raw_data(FLAGS.data_path)
-  train_data, valid_data, test_data, _ , embedding = raw_data
+    raise ValueError("Must set --data_path to guten_*.txt data directory")
 
   config = get_config()
   eval_config = get_config()
   eval_config.batch_size = 1
   eval_config.num_steps = 1
+  
+  raw_data = reader.guten_raw_data(FLAGS.data_path, config.num_steps)
+  train_data, valid_data, test_data, _ , embedding = raw_data
 
   with tf.Graph().as_default():
     initializer = tf.random_uniform_initializer(-config.init_scale,
                                                 config.init_scale)
 
     with tf.name_scope("Train"):
-      train_input = PTBInput(config=config, data=train_data, name="TrainInput")
+      train_input = GutenInput(config=config, data=train_data, name="TrainInput")
       with tf.variable_scope("Model", reuse=None, initializer=initializer):
-        m = PTBModel(is_training=True, config=config,  input_=train_input, embedding=embedding)
+        m = GutenModel(is_training=True, config=config,  input_=train_input, embedding=embedding)
       tf.summary.scalar("Training Loss", m.cost)
       tf.summary.scalar("Learning Rate", m.lr)
 
     with tf.name_scope("Valid"):
-      valid_input = PTBInput(config=config, data=valid_data, name="ValidInput")
+      valid_input = GutenInput(config=config, data=valid_data, name="ValidInput")
       with tf.variable_scope("Model", reuse=True, initializer=initializer):
-        mvalid = PTBModel(is_training=False, config=config, input_=valid_input, embedding=embedding)
+        mvalid = GutenModel(is_training=False, config=config, input_=valid_input, embedding=embedding)
       tf.summary.scalar("Validation Loss", mvalid.cost)
 
     with tf.name_scope("Test"):
-      test_input = PTBInput(config=eval_config, data=test_data, name="TestInput")
+      test_input = GutenInput(config=eval_config, data=test_data, name="TestInput")
       with tf.variable_scope("Model", reuse=True, initializer=initializer):
-        mtest = PTBModel(is_training=False, config=eval_config,
+        mtest = GutenModel(is_training=False, config=eval_config,
                          input_=test_input, embedding=embedding)
 
     sv = tf.train.Supervisor(logdir=FLAGS.save_path)
