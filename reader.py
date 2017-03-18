@@ -75,7 +75,7 @@ def build_embedding(word_to_id):
   return embedding_matrix
 
 
-def guten_raw_data(data_path=None, num_steps=35):
+def guten_raw_data(data_path=None):
   """Load raw dataset
 
   Args:

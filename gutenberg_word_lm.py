@@ -30,7 +30,7 @@ Hyperparameters:
 - lr_decay - the decay of the learning rate for each epoch after "max_epoch"
 - batch_size - the batch size
 
-Usage: python gutenberg_word_lm.py --data_path=data/ --size=<small, medium, large, test>
+Usage: python gutenberg_word_lm.py --data_path=data/ --model=<small, medium, large, test>
 
 """
 from __future__ import absolute_import
@@ -134,7 +134,6 @@ class GutenModel(object):
         if time_step > 0: tf.get_variable_scope().reuse_variables()
         (cell_output, state) = cell(inputs[:, time_step, :], state)
         outputs.append(cell_output)
-
     output = tf.reshape(tf.concat(outputs, 1), [-1, size])
     softmax_w = tf.get_variable(
         "softmax_w", [size, vocab_size], dtype=data_type())
@@ -314,7 +313,7 @@ def main(_):
   eval_config.batch_size = 1
   eval_config.num_steps = 1
   
-  raw_data = reader.guten_raw_data(FLAGS.data_path, config.num_steps)
+  raw_data = reader.guten_raw_data(FLAGS.data_path)
   train_data, valid_data, test_data, _ , embedding = raw_data
 
   with tf.Graph().as_default():

@@ -30,7 +30,7 @@ Hyperparameters:
 - lr_decay - the decay of the learning rate for each epoch after "max_epoch"
 - batch_size - the batch size
 
-Usage: python gutenberg_word_class.py --data_path=data/ --size=<small, medium, large, test>
+Usage: python gutenberg_word_class.py --data_path=data/ --model=<small, medium, large, test>
 
 """
 from __future__ import absolute_import
@@ -111,14 +111,12 @@ class GutenModel(object):
                     name="embedding", shape = self.embedding.shape, 
                     initializer=tf.constant_initializer(self.embedding), trainable=True)
 
-      #embedding = tf.Variable(
-          #tf.constant(0.0, shape=self.embedding_dim, trainable=False, name = "embedding"))
-     # embedding_placeholder = tf.placeholder(tf.float32, self.embedding_dim)
-      #embedding_init = embedding.assign(embedding_placeholder)
       inputs = tf.nn.embedding_lookup(embedding, input_.input_data)
 
     if is_training and config.keep_prob < 1:
       inputs = tf.nn.dropout(inputs, config.keep_prob)
+    
+    inputs = tf.reduce_mean(inputs, axis=1)
 
     # Simplified version of models/tutorials/rnn/rnn.py's rnn().
     # This builds an unrolled LSTM for tutorial purposes only.
@@ -129,48 +127,47 @@ class GutenModel(object):
     # inputs = tf.unstack(inputs, num=num_steps, axis=1)
     # outputs, state = tf.nn.rnn(cell, inputs,
     #                            initial_state=self._initial_state)
-    outputs = []
+    
+    #### Original code ####
+    # outputs = []
+    # state = self._initial_state
+    # with tf.variable_scope("RNN"):
+    #   for time_step in range(num_steps):
+    #     if time_step > 0: tf.get_variable_scope().reuse_variables()
+    #     (cell_output, state) = \
+    #       cell(inputs[:, time_step, :]), state)
+    #     outputs.append(cell_output)
+
     state = self._initial_state
     with tf.variable_scope("RNN"):
-      for time_step in range(num_steps):
-        if time_step > 0: tf.get_variable_scope().reuse_variables()
-        (cell_output, state) = cell(inputs[:, time_step, :], state)
-        outputs.append(cell_output)
-    
-    # for i in range(len(outputs)):
-    #   outputs[i] = tf.reduce_sum(outputs[i],1)
+      outputs, state = cell(tf.nn.l2_normalize(inputs, 1), state)
 
     num_labels = 10
-    # print ('Outputs is:', len(outputs), 'and', outputs[0].get_shape())
-    output = tf.reshape(tf.concat(outputs, 1), [-1, size])
-    # output = tf.reshape(outputs, [-1, size])
-    print('Output size:', output.get_shape())
+    output = tf.reshape(outputs[0], [-1, size])
 
     softmax_w = tf.get_variable(
         "softmax_w", [size, num_labels], dtype=data_type())
     softmax_b = tf.get_variable("softmax_b", [num_labels], dtype=data_type())
     logits = tf.matmul(output, softmax_w) + softmax_b
 
-    labels_in = tf.reshape(input_.targets, [-1])
+    labels_in = input_.targets
 
     print('Shape of logits:', logits.get_shape())
     print('Shape of labels:', labels_in.get_shape())
 
-    loss = tf.nn.sparse_softmax_cross_entropy_with_logits(
+    loss = tf.nn.softmax_cross_entropy_with_logits(
         logits=[logits],
         labels=[labels_in])
-        
-    print('Shape of loss:', loss.get_shape())
 
     self._cost = cost = tf.reduce_sum(loss) / batch_size
     self._final_state = state
     self._final_pred = tf.argmax(logits, 1)
-    self._final_label = tf.to_int64(labels_in)
+    self._final_label = tf.argmax(labels_in, 1)
 
     corr_pred = tf.equal(tf.argmax(logits, 1), \
-      tf.to_int64(labels_in))
+      tf.argmax(labels_in, 1))
 
-    self._acc = tf.reduce_mean(tf.cast(corr_pred, "float"))
+    self._acc = tf.reduce_sum(tf.cast(corr_pred, "float"))
 
     if not is_training:
       return
@@ -184,6 +181,7 @@ class GutenModel(object):
         zip(grads, tvars),
         global_step=tf.contrib.framework.get_or_create_global_step())
     
+    # self._train_op = tf.train.GradientDescentOptimizer(self._lr).minimize(cost)
     # self._train_op = tf.train.AdamOptimizer(self._lr).minimize(cost)
 
     self._new_lr = tf.placeholder(
@@ -233,11 +231,11 @@ class GutenModel(object):
 class SmallConfig(object):
   """Small config."""
   init_scale = 0.1
-  learning_rate = 1.0
+  learning_rate = 0.1 # 1.0
   max_grad_norm = 5
   num_layers = 2
-  num_steps = 3 # 20
-  hidden_size = 200
+  num_steps = 20
+  hidden_size = 20 # 200
   max_epoch = 4
   max_max_epoch = 13
   keep_prob = 1.0
@@ -281,16 +279,16 @@ class LargeConfig(object):
 class TestConfig(object):
   """Tiny config, for testing."""
   init_scale = 0.1
-  learning_rate = 1.0
+  learning_rate = 0.01 # 1.0
   max_grad_norm = 1
   num_layers = 1
-  num_steps = 20 # 5
-  hidden_size = 2
+  num_steps = 10 # 5
+  hidden_size = 1 # 2
   max_epoch = 1
   max_max_epoch = 2
   keep_prob = 1.0
   lr_decay = 0.1 # 0.5
-  batch_size = 5 # 20
+  batch_size = 10 # 20
   vocab_size = 30000
 
 
@@ -318,8 +316,8 @@ def run_epoch(session, model, eval_op=None, verbose=False):
       feed_dict[c] = state[i].c
       feed_dict[h] = state[i].h
 
-    # if step % (model.input.epoch_size // 2) == 2:
-    #   print(session.run(fetches, feed_dict))
+    if step % (model.input.epoch_size // 2) == 2:
+      print(session.run(fetches, feed_dict))
 
     vals = session.run(fetches, feed_dict)
     cost = vals["cost"]

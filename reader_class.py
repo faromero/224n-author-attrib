@@ -64,7 +64,17 @@ def _build_vocab(filename):
 
 def _file_to_word_ids(filename, word_to_id):
   data, labels = _read_words(filename)
-  return [word_to_id[word] for word in data if word in word_to_id], labels
+  # return [word_to_id[word] for word in data if word in word_to_id], labels
+  
+  new_data = []
+  new_labels = []
+  
+  for w,l in zip(data, labels):
+    if w in word_to_id:
+      new_data.append(word_to_id[w])
+      new_labels.append(l)
+  
+  return new_data, new_labels
 
 
 def build_embedding(word_to_id):
@@ -108,6 +118,7 @@ def guten_raw_data(data_path=None):
   test_data, test_labels = _file_to_word_ids(test_path, word_to_id)
   vocabulary = len(word_to_id)
   embedding = build_embedding(word_to_id)
+
   return train_data, valid_data, test_data, vocabulary, embedding, \
     train_labels, valid_labels, test_labels
 
@@ -138,30 +149,23 @@ def guten_producer(raw_data, raw_labels, batch_size, num_steps, name=None):
     max_label = np.max(np.max(raw_labels))
 
     raw_data = tf.convert_to_tensor(raw_data, name="raw_data", dtype=tf.int32)
-    
-    shrunk_labels = tf.convert_to_tensor(raw_labels, name="shrunk_labels", dtype=tf.int32)
 
     data_len = tf.size(raw_data)
     batch_len = data_len // batch_size
     data = tf.reshape(raw_data[0 : batch_size * batch_len],
                       [batch_size, batch_len])
                       
-    shrunk_labels = tf.reshape(shrunk_labels[0 : batch_size * batch_len],
-                              [batch_size, batch_len])
-    # shrunk_labels = []
-    # for bs in range(batch_size):
-    #   b_len = raw_data_size // batch_size
-    #   labels_mode = \
-    #     stats.mode(raw_labels[bs*b_len:bs*b_len + b_len])
-    #   next_labels_row = [labels_mode[0][0]]*(num_steps)
-    #   print(next_labels_row)
-    #   # next_labels_row = raw_labels[bs*b_len:bs*b_len + b_len]
-    #   shrunk_labels.append(next_labels_row)
+    shrunk_labels = []
+    for bs in range(batch_size):
+      b_len = raw_data_size // batch_size
+      labels_mode = \
+        stats.mode(raw_labels[bs*b_len:bs*b_len + b_len])
+      next_labels_row = [0]*(max_label + 1)
+      next_labels_row[labels_mode[0][0]] = 1
+      shrunk_labels.append(next_labels_row)
 
-    # print(len(shrunk_labels), len(shrunk_labels[0]))
-    # sys.exit()
-
-    # shrunk_labels = tf.convert_to_tensor(shrunk_labels, name="shrunk_labels")
+    
+    shrunk_labels = tf.convert_to_tensor(shrunk_labels, name="shrunk_labels")
 
     epoch_size = (batch_len - 1) // num_steps
     assertion = tf.assert_positive(
@@ -175,9 +179,7 @@ def guten_producer(raw_data, raw_labels, batch_size, num_steps, name=None):
                          [batch_size, (i + 1) * num_steps])
     x.set_shape([batch_size, num_steps])
     
-    # y = shrunk_labels
+    y = shrunk_labels
 
-    y = tf.strided_slice(shrunk_labels, [0, i * num_steps],
-                         [batch_size, (i + 1) * num_steps])
-    y.set_shape([batch_size, num_steps])
+    # y.set_shape([batch_size, num_steps])
     return x, y

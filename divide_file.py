@@ -9,7 +9,7 @@ trainSize = 0.8
 devSize = 0.1
 # testSize = 0.2, not needed
 
-model='class' # gen or class
+model='class' # gen, gen_auth, or class
 
 globSearch = '*_all.txt'
 
@@ -47,7 +47,12 @@ for currBook in glob.glob(totFileDir + globSearch):
       lineSplit = line.split()
       for x in range(len(lineSplit)):
         lineSplit[x] = label+lineSplit[x]
-      
+
+      line2Write = ' '.join(lineSplit)
+      line2Write += '\n'
+    elif model == 'gen_auth':
+      lineSplit = line.split()
+      lineSplit = [label] + lineSplit
       line2Write = ' '.join(lineSplit)
     else:
       line2Write = line

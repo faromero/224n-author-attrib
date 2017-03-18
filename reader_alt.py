@@ -153,13 +153,13 @@ def guten_producer(raw_data, raw_labels, batch_size, num_steps, name=None):
     curr_mod = []
     for i in range(b_l * batch_size):
       curr_mod.append(raw_labels[i])
-      if i % num_steps == (num_steps - 1):
+      if i % (num_steps+1) == (num_steps):
         new_mode = stats.mode(curr_mod)
         new_mode = new_mode[0][0]
         new_raw_data.append(max_index + new_mode + 1)
-        new_raw_data.extend(raw_data[i - (num_steps - 1):i])
+        new_raw_data.extend(raw_data[i - (num_steps):i])
         curr_mod = []
-
+    
     raw_data = tf.convert_to_tensor(new_raw_data, name="raw_data", \
       dtype=tf.int32)
 
