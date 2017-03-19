@@ -23,7 +23,7 @@ import random
 import sys
 import tensorflow as tf
 import tensorflow.contrib.layers as layers
-from reader_class import *
+from basic_classif import *
 
 map_fn = tf.map_fn
 
@@ -94,8 +94,11 @@ LEARNING_RATE = 0.01
 
 USE_LSTM = True
 
-inputs  = tf.placeholder(tf.float32, (None, None, INPUT_SIZE))  # (time, batch, in)
-outputs = tf.placeholder(tf.float32, (None, None, OUTPUT_SIZE)) # (time, batch, out)
+# inputs  = tf.placeholder(tf.float32, (None, None, INPUT_SIZE))  # (time, batch, in)
+inputs  = tf.placeholder(tf.float32, (None, None))  # (time, batch, in)
+
+# outputs = tf.placeholder(tf.float32, (None, None, OUTPUT_SIZE)) # (time, batch, out)
+outputs = tf.placeholder(tf.float32, (None, None)) # (time, batch, out)
 
 
 ## Here cell can be any function you want, provided it has two attributes:
@@ -150,28 +153,40 @@ accuracy = tf.reduce_mean(tf.cast(tf.abs(outputs - predicted_outputs) < 0.5, tf.
 ##                           TRAINING LOOP                                    ##
 ################################################################################
 
-NUM_BITS = 10
-ITERATIONS_PER_EPOCH = 100
-BATCH_SIZE = 16
+# NUM_BITS = 10
+# ITERATIONS_PER_EPOCH = 100
+# BATCH_SIZE = 16
+BATCH_SIZE = 10
 
-valid_x, valid_y = generate_batch(num_bits=NUM_BITS, batch_size=100)
+# valid_x, valid_y = generate_batch(num_bits=NUM_BITS, batch_size=100)
 
-makeData()
+train_x, train_y, valid_x, valid_y, valid_y_expanded = makeData()
 
-print len(valid_x), len(valid_x[0]), len(valid_y), len(valid_y[0])
+ITERATIONS_PER_EPOCH = train_x.shape[0] // BATCH_SIZE
+
+print "Partitioned size of data for training"
+print train_x.shape
+print train_y.shape
+
+print "Partitioned size of data for testing"
+print valid_x.shape
+print valid_y.shape
 
 session = tf.Session()
 # For some reason it is our job to do this:
-session.run(tf.initialize_all_variables())
+session.run(tf.global_variables_initializer())
 
 for epoch in range(1000):
     epoch_error = 0
-    for _ in range(ITERATIONS_PER_EPOCH):
+    for i in range(ITERATIONS_PER_EPOCH):
         # here train_fn is what triggers backprop. error and accuracy on their
         # own do not trigger the backprop.
-        x, y = generate_batch(num_bits=NUM_BITS, batch_size=BATCH_SIZE)
+        # x, y = generate_batch(num_bits=NUM_BITS, batch_size=BATCH_SIZE)
+
+        x = train_x[i*BATCH_SIZE:i*BATCH_SIZE + BATCH_SIZE]
+        y = train_y[i*BATCH_SIZE:i*BATCH_SIZE + BATCH_SIZE]
+
         print len(x), len(x[0]), len(y), len(y[0])
-        sys.exit()
 
         epoch_error += session.run([error, train_fn], {
             inputs: x,
